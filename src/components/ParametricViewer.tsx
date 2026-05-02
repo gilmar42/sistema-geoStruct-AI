@@ -5,21 +5,23 @@ import { OrbitControls, Grid, Environment, OrthographicCamera, PerspectiveCamera
 function SceneContents({ components }: { components: React.ReactNode[] }) {
   return (
     <>
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={0.4} />
       <directionalLight 
-        position={[15, 30, 15]} 
-        intensity={2.5} 
+        position={[20, 40, 20]} 
+        intensity={3.5} 
         color="#FFFFFF" 
         castShadow 
-        shadow-mapSize={[2048, 2048]} 
-        shadow-camera-left={-20}
-        shadow-camera-right={20}
-        shadow-camera-top={20}
-        shadow-camera-bottom={-20}
+        shadow-mapSize={[4096, 4096]} 
+        shadow-camera-left={-30}
+        shadow-camera-right={30}
+        shadow-camera-top={30}
+        shadow-camera-bottom={-30}
+        shadow-bias={-0.0001}
       />
-      <pointLight position={[-10, 10, -10]} intensity={1.0} color="#38BDF8" />
+      <pointLight position={[-15, 15, -15]} intensity={1.5} color="#38BDF8" distance={50} />
+      <pointLight position={[15, 5, 15]} intensity={0.8} color="#FDE68A" distance={50} />
       
-      <ContactShadows position={[0, -0.49, 0]} opacity={0.7} scale={40} blur={2.5} far={10} />
+      <ContactShadows position={[0, -0.49, 0]} opacity={0.85} scale={60} blur={1.5} far={15} resolution={1024} color="#000000" />
       
       <Grid 
         renderOrder={-1} 
@@ -34,7 +36,7 @@ function SceneContents({ components }: { components: React.ReactNode[] }) {
       />
       
       {components}
-      <Environment preset="apartment" background={false} />
+      <Environment preset="city" background={false} />
     </>
   );
 }
@@ -103,12 +105,16 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
         if (tipoStr.includes('pilar') || tipoStr.includes('viga') || tipoStr.includes('cobertura')) return;
       }
 
-      const dx = getParam(p, ['dim_x', 'largura', 'diametro', 'vão'], 1) * scale;
-      const dy = getParam(p, ['dim_y', 'altura', 'espessura'], 1) * scale;
-      const dz = getParam(p, ['dim_z', 'profundidade', 'comprimento'], 1) * scale;
+      const rawDx = getParam(p, ['dim_x', 'largura', 'diametro', 'vão'], 1);
+      const rawDy = getParam(p, ['dim_y', 'altura', 'espessura'], 1);
+      const rawDz = getParam(p, ['dim_z', 'profundidade', 'comprimento'], 1);
+      
+      const dx = rawDx * scale;
+      const dy = rawDy * scale;
+      const dz = rawDz * scale;
       
       const px = getParam(p, ['pos_x'], 0) * scale;
-      const py = getParam(p, ['pos_y'], dy / 2) * scale;
+      const py = getParam(p, ['pos_y'], rawDy / 2) * scale;
       const pz = getParam(p, ['pos_z'], 0) * scale;
 
       const isCylinder = tipoStr.includes('tanque') || tipoStr.includes('tubo') || tipoStr.includes('eixo') || tipoStr.includes('motor');
@@ -119,12 +125,12 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
         meshes.push(
           <group position={[px, py, pz]} key={`equip_${index}`}>
              <mesh castShadow>
-               <boxGeometry args={[dx, 0.8, 1.5]} />
+               <boxGeometry args={[dx, 0.2, 0.3]} />
                <meshPhysicalMaterial color="#F59E0B" metalness={0.9} />
                <Edges color="#FDE68A" />
              </mesh>
-             <mesh position={[0, -0.6, 0]} castShadow>
-               <boxGeometry args={[1, 1, 1.2]} />
+             <mesh position={[0, -0.2, 0]} castShadow>
+               <boxGeometry args={[0.4, 0.3, 0.4]} />
                <meshPhysicalMaterial color="#1E293B" metalness={0.5} />
                <Edges color="#94A3B8" />
              </mesh>
@@ -175,7 +181,7 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
           {/* Escada de Acesso Espiralada */}
           {[...Array(Math.floor(h * 2))].map((_, i) => (
              <mesh position={[Math.cos(i) * (radius + 0.3), (i * 0.5), Math.sin(i) * (radius + 0.3)]} rotation={[0, -i, 0]} key={`escada_${i}`} castShadow>
-               <boxGeometry args={[0.8, 0.05, 0.3]} />
+               <boxGeometry args={[0.4, 0.02, 0.15]} />
                <meshPhysicalMaterial color="#F59E0B" metalness={0.9} roughness={0.1} />
              </mesh>
           ))}
@@ -195,12 +201,12 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
           {[ -l/2, l/2 ].map((zPos, idx) => (
             <group key={`ponte_sup_${idx}`}>
               <mesh position={[-w/2, h/2, zPos]} castShadow receiveShadow>
-                <boxGeometry args={[0.6, h, 0.6]} />
+                <boxGeometry args={[0.2, h, 0.3]} />
                 <meshPhysicalMaterial color="#0284C7" metalness={0.8} roughness={0.2} />
                 <Edges color="#BAE6FD" />
               </mesh>
               <mesh position={[w/2, h/2, zPos]} castShadow receiveShadow>
-                <boxGeometry args={[0.6, h, 0.6]} />
+                <boxGeometry args={[0.2, h, 0.3]} />
                 <meshPhysicalMaterial color="#0284C7" metalness={0.8} roughness={0.2} />
                 <Edges color="#BAE6FD" />
               </mesh>
@@ -208,24 +214,24 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
           ))}
           {/* Vigas Longitudinais (Caminho de Rolamento) */}
           <mesh position={[-w/2, h, 0]} castShadow>
-            <boxGeometry args={[0.8, 0.8, l + 1]} />
+            <boxGeometry args={[0.2, 0.4, l + 0.5]} />
             <meshPhysicalMaterial color="#0369A1" metalness={0.7} />
             <Edges color="#38BDF8" />
           </mesh>
           <mesh position={[w/2, h, 0]} castShadow>
-            <boxGeometry args={[0.8, 0.8, l + 1]} />
+            <boxGeometry args={[0.2, 0.4, l + 0.5]} />
             <meshPhysicalMaterial color="#0369A1" metalness={0.7} />
             <Edges color="#38BDF8" />
           </mesh>
           {/* Viga Transversal (A Ponte em si) */}
-          <mesh position={[0, h + 0.5, 0]} castShadow>
-            <boxGeometry args={[w + 2, 0.6, 1.5]} />
+          <mesh position={[0, h + 0.2, 0]} castShadow>
+            <boxGeometry args={[w + 0.5, 0.3, 0.4]} />
             <meshPhysicalMaterial color="#F59E0B" metalness={0.9} roughness={0.2} />
             <Edges color="#FDE68A" />
           </mesh>
           {/* Carrinho / Guincho */}
-          <mesh position={[w/4, h + 0.8, 0]} castShadow>
-            <boxGeometry args={[1, 1, 1.2]} />
+          <mesh position={[w/4, h + 0.35, 0]} castShadow>
+            <boxGeometry args={[0.5, 0.4, 0.6]} />
             <meshPhysicalMaterial color="#1E293B" metalness={0.5} />
             <Edges color="#94A3B8" />
           </mesh>
@@ -243,31 +249,31 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
         <group key="gerador_cacamba" position={[0, h/2 + 0.5, 0]} rotation={[0.2, 0, 0]}>
           {/* Assoalho da Caçamba (Chapa Inferior) */}
           <mesh position={[0, -h/2, 0]} castShadow receiveShadow>
-            <boxGeometry args={[w, 0.2, l]} />
+            <boxGeometry args={[w, 0.05, l]} />
             <meshPhysicalMaterial color="#475569" metalness={0.8} roughness={0.6} />
             <Edges color="#94A3B8" />
           </mesh>
           {/* Tampa Lateral Esquerda */}
-          <mesh position={[-w/2 + 0.1, 0, 0]} castShadow>
-            <boxGeometry args={[0.2, h, l]} />
+          <mesh position={[-w/2 + 0.025, 0, 0]} castShadow>
+            <boxGeometry args={[0.05, h, l]} />
             <meshPhysicalMaterial color="#0284C7" metalness={0.8} roughness={0.3} />
             <Edges color="#38BDF8" />
           </mesh>
           {/* Tampa Lateral Direita */}
-          <mesh position={[w/2 - 0.1, 0, 0]} castShadow>
-            <boxGeometry args={[0.2, h, l]} />
+          <mesh position={[w/2 - 0.025, 0, 0]} castShadow>
+            <boxGeometry args={[0.05, h, l]} />
             <meshPhysicalMaterial color="#0284C7" metalness={0.8} roughness={0.3} />
             <Edges color="#38BDF8" />
           </mesh>
           {/* Painel Frontal (Perto da Cabine) */}
-          <mesh position={[0, 0, -l/2 + 0.1]} castShadow>
-            <boxGeometry args={[w, h, 0.2]} />
+          <mesh position={[0, 0, -l/2 + 0.025]} castShadow>
+            <boxGeometry args={[w, h, 0.05]} />
             <meshPhysicalMaterial color="#0369A1" metalness={0.8} />
             <Edges color="#7DD3FC" />
           </mesh>
           {/* Tampa Traseira (Basculante) */}
-          <mesh position={[0, 0, l/2 - 0.1]} rotation={[-0.1, 0, 0]} castShadow>
-            <boxGeometry args={[w, h, 0.15]} />
+          <mesh position={[0, 0, l/2 - 0.025]} rotation={[-0.1, 0, 0]} castShadow>
+            <boxGeometry args={[w, h, 0.05]} />
             <meshPhysicalMaterial color="#F59E0B" metalness={0.9} roughness={0.2} />
             <Edges color="#FDE68A" />
           </mesh>
@@ -276,12 +282,12 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
           {[-l/4, 0, l/4].map((zPos, idx) => (
             <group key={`costela_${idx}`}>
               <mesh position={[-w/2, 0, zPos]}>
-                <boxGeometry args={[0.3, h, 0.3]} />
+                <boxGeometry args={[0.08, h, 0.08]} />
                 <meshPhysicalMaterial color="#0284C7" metalness={0.8} />
                 <Edges color="#38BDF8" />
               </mesh>
               <mesh position={[w/2, 0, zPos]}>
-                <boxGeometry args={[0.3, h, 0.3]} />
+                <boxGeometry args={[0.08, h, 0.08]} />
                 <meshPhysicalMaterial color="#0284C7" metalness={0.8} />
                 <Edges color="#38BDF8" />
               </mesh>
@@ -300,7 +306,7 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
       {/* Pistão Hidráulico Base (Fora da rotação da caçamba) */}
       meshes.push(
         <mesh position={[0, h/4, -l/4]} rotation={[-0.2, 0, 0]} key="pistao_base" castShadow>
-          <cylinderGeometry args={[0.4, 0.4, h, 16]} />
+          <cylinderGeometry args={[0.1, 0.1, h, 16]} />
           <meshPhysicalMaterial color="#1E293B" metalness={0.9} roughness={0.1} />
           <Edges color="#64748B" />
         </mesh>
@@ -319,23 +325,23 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
               <group key={`portico_${i}`}>
                 {/* Pilares */}
                 <mesh position={[-w/2, h/2, zPos]} castShadow receiveShadow>
-                  <boxGeometry args={[0.4, h, 0.4]} />
+                  <boxGeometry args={[0.15, h, 0.25]} />
                   <meshPhysicalMaterial color="#0284C7" metalness={0.8} />
                   <Edges color="#BAE6FD" />
                 </mesh>
                 <mesh position={[w/2, h/2, zPos]} castShadow receiveShadow>
-                  <boxGeometry args={[0.4, h, 0.4]} />
+                  <boxGeometry args={[0.15, h, 0.25]} />
                   <meshPhysicalMaterial color="#0284C7" metalness={0.8} />
                   <Edges color="#BAE6FD" />
                 </mesh>
                 {/* Tesoura do Telhado (Viga Inclinada) */}
                 <mesh position={[-w/4, h + (w*0.1)/2, zPos]} rotation={[0, 0, 0.2]} castShadow>
-                  <boxGeometry args={[w/2 + 0.2, 0.4, 0.3]} />
+                  <boxGeometry args={[w/2 + 0.1, 0.15, 0.1]} />
                   <meshPhysicalMaterial color="#0369A1" metalness={0.8} />
                   <Edges color="#7DD3FC" />
                 </mesh>
                 <mesh position={[w/4, h + (w*0.1)/2, zPos]} rotation={[0, 0, -0.2]} castShadow>
-                  <boxGeometry args={[w/2 + 0.2, 0.4, 0.3]} />
+                  <boxGeometry args={[w/2 + 0.1, 0.15, 0.1]} />
                   <meshPhysicalMaterial color="#0369A1" metalness={0.8} />
                   <Edges color="#7DD3FC" />
                 </mesh>
@@ -347,21 +353,21 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
           {[-w/2, -w/4, 0, w/4, w/2].map((xPos, i) => {
             const yOffset = h + (Math.abs(xPos) === w/2 ? 0 : Math.abs(xPos) === w/4 ? w*0.05 : w*0.1);
             return (
-              <mesh position={[xPos, yOffset + 0.2, 0]} key={`terca_${i}`} castShadow>
-                <boxGeometry args={[0.2, 0.2, l]} />
+              <mesh position={[xPos, yOffset + 0.08, 0]} key={`terca_${i}`} castShadow>
+                <boxGeometry args={[0.05, 0.08, l]} />
                 <meshPhysicalMaterial color="#1E293B" metalness={0.9} />
               </mesh>
             );
           })}
 
           {/* Telhado Translúcido em Duas Águas */}
-          <mesh position={[-w/4, h + (w*0.1)/2 + 0.3, 0]} rotation={[0, 0, 0.2]} castShadow>
-            <boxGeometry args={[w/2 + 0.6, 0.1, l + 1]} />
+          <mesh position={[-w/4, h + (w*0.1)/2 + 0.15, 0]} rotation={[0, 0, 0.2]} castShadow>
+            <boxGeometry args={[w/2 + 0.4, 0.02, l + 0.5]} />
             <meshPhysicalMaterial color="#38BDF8" transparent opacity={0.3} metalness={0.1} />
             <Edges color="#0EA5E9" />
           </mesh>
-          <mesh position={[w/4, h + (w*0.1)/2 + 0.3, 0]} rotation={[0, 0, -0.2]} castShadow>
-            <boxGeometry args={[w/2 + 0.6, 0.1, l + 1]} />
+          <mesh position={[w/4, h + (w*0.1)/2 + 0.15, 0]} rotation={[0, 0, -0.2]} castShadow>
+            <boxGeometry args={[w/2 + 0.4, 0.02, l + 0.5]} />
             <meshPhysicalMaterial color="#38BDF8" transparent opacity={0.3} metalness={0.1} />
             <Edges color="#0EA5E9" />
           </mesh>
@@ -391,7 +397,7 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
             <span className="text-[#38BDF8] font-bold">Visão:</span> Perspectiva Dinâmica
           </div>
         </div>
-        <Canvas shadows>
+        <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, powerPreference: "high-performance" }}>
           <PerspectiveCamera makeDefault position={[maxDim, maxDim * 0.8, maxDim * 1.4]} fov={45} />
           <Suspense fallback={null}>
             <color attach="background" args={['#0F172A']} />
@@ -408,7 +414,7 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
               Planta Baixa (Topo)
             </div>
           </div>
-          <Canvas shadows>
+          <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, powerPreference: "high-performance" }}>
             <OrthographicCamera makeDefault position={[0, 30, 0]} zoom={5} rotation={[-Math.PI / 2, 0, 0]} />
             <Suspense fallback={null}>
               <color attach="background" args={['#0B1120']} />
@@ -423,7 +429,7 @@ export default function ParametricViewer({ ast }: { ast: Record<string, unknown>
               Elevação (Frente)
             </div>
           </div>
-          <Canvas shadows>
+          <Canvas shadows dpr={[1, 2]} gl={{ antialias: true, powerPreference: "high-performance" }}>
             <OrthographicCamera makeDefault position={[0, 5, 30]} zoom={6} />
             <Suspense fallback={null}>
               <color attach="background" args={['#0B1120']} />
